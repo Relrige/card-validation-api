@@ -1,6 +1,10 @@
 package validator
 
 import (
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/Relrige/card-validator-api/internal/domain"
 )
 
@@ -9,8 +13,31 @@ func ValidateCard(card domain.CardRequest) *domain.ValidationResponse {
 		return errorResponse("001", "Missing required fields")
 	}
 
-	if len(card.CardNumber) < 12 || len(card.CardNumber) > 19 || !isValidLuhn(card.CardNumber) {
+	cleanCardNumber := strings.ReplaceAll(card.CardNumber, " ", "")
+	if len(cleanCardNumber) < 12 || len(cleanCardNumber) > 19 || !isValidLuhn(cleanCardNumber) {
 		return errorResponse("002", "Invalid card number format")
+	}
+
+	month, err := strconv.Atoi(card.ExpirationMonth)
+	if err != nil || month < 1 || month > 12 {
+		return errorResponse("003", "Invalid expiration month")
+	}
+
+	if len(card.ExpirationYear) != 4 {
+		return errorResponse("004", "Invalid expiration year length")
+	}
+
+	now := time.Now()
+	currentYear := now.Year()
+	currentMonth := int(now.Month())
+
+	year, err := strconv.Atoi(card.ExpirationYear)
+	if err != nil || year < currentYear || (year == currentYear && month < currentMonth) {
+		return errorResponse("005", "Card has expired")
+	}
+
+	if year > currentYear+20 {
+		return errorResponse("006", "Expiration year is too far in the future")
 	}
 
 	return &domain.ValidationResponse{
