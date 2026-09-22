@@ -8,7 +8,7 @@ import (
 	"github.com/Relrige/card-validator-api/internal/domain"
 )
 
-func ValidateCard(card domain.CardRequest) *domain.ValidationResponse {
+func ValidateCard(card domain.CardRequest, now time.Time) *domain.ValidationResponse {
 	if card.CardNumber == "" || card.ExpirationMonth == "" || card.ExpirationYear == "" {
 		return errorResponse("001", "Missing required fields")
 	}
@@ -27,7 +27,6 @@ func ValidateCard(card domain.CardRequest) *domain.ValidationResponse {
 		return errorResponse("004", "Invalid expiration year length")
 	}
 
-	now := time.Now()
 	currentYear := now.Year()
 	currentMonth := int(now.Month())
 
