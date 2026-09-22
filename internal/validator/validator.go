@@ -33,16 +33,8 @@ func ValidateCard(card domain.CardRequest, now time.Time) *domain.ValidationResp
 		return resp
 	}
 
-	currentYear := now.Year()
-	currentMonth := int(now.Month())
-
-	year, err := strconv.Atoi(card.ExpirationYear)
-	if err != nil || year < currentYear || (year == currentYear && month < currentMonth) {
-		return errorResponse(domain.ErrCardExpired, "Card has expired")
-	}
-
-	if year > currentYear+maxYearsInFuture {
-		return errorResponse(domain.ErrYearTooFarInFuture, "Expiration year is too far in the future")
+	if resp := validateExpiration(month, year, now); resp != nil {
+		return resp
 	}
 
 	return &domain.ValidationResponse{
@@ -113,6 +105,19 @@ func validateYear(raw string) (int, *domain.ValidationResponse) {
 		return 0, errorResponse(domain.ErrInvalidYearLength, "Invalid expiration year length")
 	}
 	return year, nil
+}
+
+func validateExpiration(month, year int, now time.Time) *domain.ValidationResponse {
+	currentYear := now.Year()
+	currentMonth := int(now.Month())
+
+	if year < currentYear || (year == currentYear && month < currentMonth) {
+		return errorResponse(domain.ErrCardExpired, "Card has expired")
+	}
+	if year > currentYear+maxYearsInFuture {
+		return errorResponse(domain.ErrYearTooFarInFuture, "Expiration year is too far in the future")
+	}
+	return nil
 }
 
 func errorResponse(code, message string) *domain.ValidationResponse {
