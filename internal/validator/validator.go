@@ -8,23 +8,29 @@ import (
 	"github.com/Relrige/card-validator-api/internal/domain"
 )
 
+const (
+	minCardNumberLength = 12
+	maxCardNumberLength = 19
+	maxYearsInFuture    = 20
+)
+
 func ValidateCard(card domain.CardRequest, now time.Time) *domain.ValidationResponse {
 	if card.CardNumber == "" || card.ExpirationMonth == "" || card.ExpirationYear == "" {
-		return errorResponse("001", "Missing required fields")
+		return errorResponse(domain.ErrMissingFields, "Missing required fields")
 	}
 
 	cleanCardNumber := strings.ReplaceAll(card.CardNumber, " ", "")
-	if len(cleanCardNumber) < 12 || len(cleanCardNumber) > 19 || !isValidLuhn(cleanCardNumber) {
-		return errorResponse("002", "Invalid card number format")
+	if len(cleanCardNumber) < minCardNumberLength || len(cleanCardNumber) > maxCardNumberLength || !isValidLuhn(cleanCardNumber) {
+		return errorResponse(domain.ErrInvalidCardNumber, "Invalid card number format")
 	}
 
 	month, err := strconv.Atoi(card.ExpirationMonth)
 	if err != nil || month < 1 || month > 12 {
-		return errorResponse("003", "Invalid expiration month")
+		return errorResponse(domain.ErrInvalidMonth, "Invalid expiration month")
 	}
 
 	if len(card.ExpirationYear) != 4 {
-		return errorResponse("004", "Invalid expiration year length")
+		return errorResponse(domain.ErrInvalidYearLength, "Invalid expiration year length")
 	}
 
 	currentYear := now.Year()
@@ -32,11 +38,11 @@ func ValidateCard(card domain.CardRequest, now time.Time) *domain.ValidationResp
 
 	year, err := strconv.Atoi(card.ExpirationYear)
 	if err != nil || year < currentYear || (year == currentYear && month < currentMonth) {
-		return errorResponse("005", "Card has expired")
+		return errorResponse(domain.ErrCardExpired, "Card has expired")
 	}
 
-	if year > currentYear+20 {
-		return errorResponse("006", "Expiration year is too far in the future")
+	if year > currentYear+maxYearsInFuture {
+		return errorResponse(domain.ErrYearTooFarInFuture, "Expiration year is too far in the future")
 	}
 
 	return &domain.ValidationResponse{

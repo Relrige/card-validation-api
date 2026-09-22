@@ -15,3 +15,12 @@ type ValidationResponse struct {
 	Valid bool         `json:"valid"`
 	Error *ErrorDetail `json:"error,omitempty"`
 }
+
+const (
+	ErrMissingFields      = "001"
+	ErrInvalidCardNumber  = "002"
+	ErrInvalidMonth       = "003"
+	ErrInvalidYearLength  = "004"
+	ErrCardExpired        = "005"
+	ErrYearTooFarInFuture = "006"
+)
