@@ -19,9 +19,8 @@ func ValidateCard(card domain.CardRequest, now time.Time) *domain.ValidationResp
 		return errorResponse(domain.ErrMissingFields, "Missing required fields")
 	}
 
-	cleanCardNumber := strings.ReplaceAll(card.CardNumber, " ", "")
-	if len(cleanCardNumber) < minCardNumberLength || len(cleanCardNumber) > maxCardNumberLength || !isValidLuhn(cleanCardNumber) {
-		return errorResponse(domain.ErrInvalidCardNumber, "Invalid card number format")
+	if resp := validateCardNumber(card.CardNumber); resp != nil {
+		return resp
 	}
 
 	month, err := strconv.Atoi(card.ExpirationMonth)
@@ -50,6 +49,35 @@ func ValidateCard(card domain.CardRequest, now time.Time) *domain.ValidationResp
 	}
 }
 
+func validateCardNumber(raw string) *domain.ValidationResponse {
+	clean := cleanCardNumber(raw)
+
+	if len(clean) < minCardNumberLength || len(clean) > maxCardNumberLength {
+		return errorResponse(domain.ErrInvalidCardNumber, "Invalid card number format")
+	}
+	if !isNumeric(clean) {
+		return errorResponse(domain.ErrInvalidCardNumber, "Invalid card number format")
+	}
+	if !isValidLuhn(clean) {
+		return errorResponse(domain.ErrInvalidCardNumber, "Invalid card number format")
+	}
+	return nil
+}
+
+func cleanCardNumber(raw string) string {
+	replacer := strings.NewReplacer(" ", "", "-", "")
+	return replacer.Replace(raw)
+}
+
+func isNumeric(s string) bool {
+	for _, c := range s {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
+}
+
 func errorResponse(code, message string) *domain.ValidationResponse {
 	return &domain.ValidationResponse{
 		Valid: false,
@@ -64,9 +92,6 @@ func isValidLuhn(cardNumber string) bool {
 	sum := 0
 	isSecond := false
 	for i := len(cardNumber) - 1; i >= 0; i-- {
-		if cardNumber[i] < '0' || cardNumber[i] > '9' {
-			return false
-		}
 		digit := int(cardNumber[i] - '0')
 		if isSecond {
 			digit *= 2
