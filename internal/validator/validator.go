@@ -23,13 +23,14 @@ func ValidateCard(card domain.CardRequest, now time.Time) *domain.ValidationResp
 		return resp
 	}
 
-	month, err := strconv.Atoi(card.ExpirationMonth)
-	if err != nil || month < 1 || month > 12 {
-		return errorResponse(domain.ErrInvalidMonth, "Invalid expiration month")
+	month, resp := validateMonth(card.ExpirationMonth)
+	if resp != nil {
+		return resp
 	}
 
-	if len(card.ExpirationYear) != 4 {
-		return errorResponse(domain.ErrInvalidYearLength, "Invalid expiration year length")
+	year, resp := validateYear(card.ExpirationYear)
+	if resp != nil {
+		return resp
 	}
 
 	currentYear := now.Year()
@@ -78,16 +79,6 @@ func isNumeric(s string) bool {
 	return true
 }
 
-func errorResponse(code, message string) *domain.ValidationResponse {
-	return &domain.ValidationResponse{
-		Valid: false,
-		Error: &domain.ErrorDetail{
-			Code:    code,
-			Message: message,
-		},
-	}
-}
-
 func isValidLuhn(cardNumber string) bool {
 	sum := 0
 	isSecond := false
@@ -103,4 +94,33 @@ func isValidLuhn(cardNumber string) bool {
 		sum += digit
 	}
 	return sum%10 == 0
+}
+
+func validateMonth(raw string) (int, *domain.ValidationResponse) {
+	month, err := strconv.Atoi(raw)
+	if err != nil || month < 1 || month > 12 {
+		return 0, errorResponse(domain.ErrInvalidMonth, "Invalid expiration month")
+	}
+	return month, nil
+}
+
+func validateYear(raw string) (int, *domain.ValidationResponse) {
+	if len(raw) != 4 {
+		return 0, errorResponse(domain.ErrInvalidYearLength, "Invalid expiration year length")
+	}
+	year, err := strconv.Atoi(raw)
+	if err != nil {
+		return 0, errorResponse(domain.ErrInvalidYearLength, "Invalid expiration year length")
+	}
+	return year, nil
+}
+
+func errorResponse(code, message string) *domain.ValidationResponse {
+	return &domain.ValidationResponse{
+		Valid: false,
+		Error: &domain.ErrorDetail{
+			Code:    code,
+			Message: message,
+		},
+	}
 }
